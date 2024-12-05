@@ -1,0 +1,64 @@
+# Binaries for programs and plugins
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Output of the Go toolchain
+*.out
+
+# Dependency directories (e.g., vendor/)
+vendor/
+
+# Build directory
+bin/
+build/
+
+# Logs and databases
+*.log
+*.sql
+*.sqlite
+*.db
+*.db-journal
+
+# Environment files
+.env
+.env.*
+
+# Temporary files and caches
+*.tmp
+*.temp
+*.swp
+*.swo
+*.bak
+
+# IDE specific files
+.idea/
+.vscode/
+*.iml
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Git-specific
+.git/
+*.orig
+
+# Coverage and test results
+*.cover
+*.test
+
+# Generated Go files
+*.gen.go
+
+# Private keys or certificates
+*.key
+*.crt
+
+# Gin session or cache files
+sessions/
+cache/
+
+# Specific to Go modules
+/go.sum
