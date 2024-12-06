@@ -5,8 +5,21 @@ import (
 	"mirage-backend/controllers"
 )
 
-// SetupUserRoutes sets up all routes related to User
-func SetupUserRoutes(rg *gin.RouterGroup) {
-	rg.POST("/users", controllers.CreateUser)
-	// Add other routes here
+func SetupUserRoutes(api *gin.RouterGroup) {
+	controllers.InitializeUserController()
+
+	userRoutes := api.Group("/users")
+	{
+		// Get User Profile
+		userRoutes.GET("/:userId", controllers.GetUserProfile)
+
+		// Update User Profile
+		userRoutes.PUT("/:userId", controllers.UpdateUserProfile)
+
+		// Delete User
+		userRoutes.DELETE("/:userId", controllers.DeleteUser)
+
+		// Get All Users
+		userRoutes.GET("/", controllers.GetAllUsers)
+	}
 }

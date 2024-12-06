@@ -5,11 +5,14 @@ import (
 )
 
 func InitRoutes(r *gin.Engine) {
-	api := r.Group("/api")
+	api := r.Group("/api/v1")
 	{
 		SetupHomepageRoutes(api)
 		SetupUserRoutes(api)
 		SetupAlbumRoutes(api)
 		SetupPictureRoutes(api)
+
+		// Health check route
+		SetupHealthRoutes(api)
 	}
 }

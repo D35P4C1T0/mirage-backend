@@ -6,7 +6,20 @@ import (
 )
 
 // SetupAlbumRoutes sets up all routes related to Album
-func SetupAlbumRoutes(rg *gin.RouterGroup) {
-	rg.POST("/albums", controllers.CreateAlbum)
-	// Add other routes here
+func SetupAlbumRoutes(api *gin.RouterGroup) {
+
+	//controllers.InitializeAlbumController()
+
+	// Route group for album-related picture operations
+	albumRoutes := api.Group("/albums")
+	{
+		// Create a new album
+		albumRoutes.POST("/", controllers.CreateAlbum)
+
+		// Get all albums
+		albumRoutes.GET("/", controllers.GetAllAlbums)
+
+		// Get a specific album by ID
+		albumRoutes.GET("/:albumId", controllers.GetAlbumByID)
+	}
 }
