@@ -167,3 +167,47 @@ func GetAllPictures(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": "Pictures retrieved successfully", "data": pictures})
 }
+
+func DeCouplePictureFromAlbum(c *gin.Context) {
+	albumID := c.Param("albumId")
+	pictureID := c.Param("pictureId")
+
+	// Validate album ID
+	albumObjectID, err := primitive.ObjectIDFromHex(albumID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid album ID"})
+		return
+	}
+
+	// Validate picture ID
+	pictureObjectID, err := primitive.ObjectIDFromHex(pictureID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid picture ID"})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	// Update the album to remove the picture ID from the PictureIDs list
+	filter := bson.M{"_id": albumObjectID}
+	update := bson.M{"$pull": bson.M{"pictureIds": pictureObjectID}}
+
+	result, err := albumCollection.UpdateOne(ctx, filter, update)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to dissociate picture from album", "details": err.Error()})
+		return
+	}
+
+	if result.MatchedCount == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Album not found"})
+		return
+	}
+
+	if result.ModifiedCount == 0 {
+		c.JSON(http.StatusConflict, gin.H{"error": "Picture was not associated with the album"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Picture dissociated from album successfully"})
+}

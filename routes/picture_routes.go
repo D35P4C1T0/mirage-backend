@@ -16,6 +16,9 @@ func SetupPictureRoutes(api *gin.RouterGroup) {
 
 		// Get all pictures in a specific album
 		albumRoutes.GET("/", controllers.GetPicturesInAlbum)
+
+		// Removes a picture from an album without deleting the picture
+		albumRoutes.DELETE("/:pictureId", controllers.DeCouplePictureFromAlbum)
 	}
 
 	// Route group for picture-related operations
