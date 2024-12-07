@@ -11,6 +11,7 @@ func InitRoutes(r *gin.Engine) {
 		SetupUserRoutes(api)
 		SetupAlbumRoutes(api)
 		SetupPictureRoutes(api)
+		SetupProfilePictureRoutes(api)
 
 		// Homepage result
 		other.SetupHomepageRoutes(api)

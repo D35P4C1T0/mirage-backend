@@ -24,6 +24,31 @@ func InitializePictureController() {
 	pictureCollection = database.GetCollection(PictureCollectionName)
 }
 
+// TODO: add picture compression
+
+// UploadPicture handles the uploading of a new picture
+func UploadPicture(c *gin.Context) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	var picture models.Picture
+
+	if err := c.ShouldBindJSON(&picture); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input", "details": err.Error()})
+		return
+	}
+
+	picture.ID = primitive.NewObjectID()
+	picture.UploadedAt = time.Now()
+
+	if _, err := pictureCollection.InsertOne(ctx, picture); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to upload picture", "details": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{"message": "Picture uploaded successfully", "data": picture})
+}
+
 // UploadPictureToAlbum handles the uploading of a new picture to an album
 func UploadPictureToAlbum(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)

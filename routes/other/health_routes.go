@@ -35,7 +35,7 @@ type ServerMetrics struct {
 
 var (
 	appStartTime time.Time
-	appVersion   = "1.0.0"
+	appVersion   = "0.1.0"
 	appEnv       = "development"
 )
 

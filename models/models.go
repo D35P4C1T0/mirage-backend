@@ -72,7 +72,7 @@ type Picture struct {
 	FacesID     []primitive.ObjectID `bson:"faces_id,omitempty"`    // List of recognized face IDs
 	Width       int                  `bson:"width,omitempty"`       // Image width in pixels
 	Height      int                  `bson:"height,omitempty"`      // Image height in pixels
-	FileSize    int64                `bson:"file_size,omitempty"`   // File size in bytes
+	//FileSize    int64                `bson:"file_size,omitempty"`   // File size in bytes
 }
 
 // SmartFrame Represents a smart frame device

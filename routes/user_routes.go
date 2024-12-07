@@ -13,6 +13,9 @@ func SetupUserRoutes(api *gin.RouterGroup) {
 		// Get User Profile
 		userRoutes.GET("/:userId", controllers.GetUserProfile)
 
+		// Create User
+		userRoutes.POST("/", controllers.CreateUser)
+
 		// Update User Profile
 		userRoutes.PUT("/:userId", controllers.UpdateUserProfile)
 
