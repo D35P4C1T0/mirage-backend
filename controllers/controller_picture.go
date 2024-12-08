@@ -1,13 +1,15 @@
 package controllers
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"image"
 	"io"
 	"log"
+	"mime/multipart"
 	"mirage-backend/utils"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -18,7 +20,7 @@ import (
 	"mirage-backend/models"
 )
 
-const timeoutDuration = 5 * time.Second
+const timeoutDuration = 10 * time.Second
 
 const CompressionQuality = 80
 
@@ -31,45 +33,70 @@ func InitializePictureController() {
 	pictureCollection = database.GetCollection(PictureCollectionName)
 }
 
-// UploadPicture handles the upload of a new picture
+// UploadPicture handles uploading a new picture via a multipart/form-data POST request.
 func UploadPicture(c *gin.Context) {
-	// Set a context timeout
+	// Set context with timeout
 	ctx, cancel := context.WithTimeout(context.Background(), timeoutDuration)
 	defer cancel()
 
-	// Ensure the correct content type
-	contentType := c.GetHeader("Content-Type")
-	if !strings.HasPrefix(contentType, "image/") {
-		c.JSON(http.StatusUnsupportedMediaType, gin.H{"error": "Content-Type must be an image"})
+	// Ensure multipart/form-data is used
+	contentType := c.ContentType()
+	if contentType != "multipart/form-data" {
+		c.JSON(http.StatusUnsupportedMediaType, gin.H{"error": "Content-Type must be multipart/form-data"})
 		return
 	}
 
-	// Read the raw body
-	fileBytes, err := io.ReadAll(c.Request.Body)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read file content", "details": err.Error()})
+	// Retrieve the uploaded file
+	file, header, fileErr := c.Request.FormFile("file")
+	if fileErr != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to retrieve file", "details": fileErr.Error()})
+		return
+	}
+	defer func(file multipart.File) {
+		err := file.Close()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to close file", "details": err.Error()})
+		}
+	}(file)
+
+	log.Printf("Received file: %s, size: %d bytes", header.Filename, header.Size)
+
+	// Read the file into memory
+	fileBytes, readErr := io.ReadAll(file)
+	if readErr != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read file", "details": readErr.Error()})
 		return
 	}
 
-	// Compress the image
-	compressedImage, err := utils.ScaleAndConvertToWebPBytes(fileBytes, CompressionQuality)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to compress image", "details": err.Error()})
+	// Decode and validate the image
+	_, format, decodeErr := image.Decode(bytes.NewReader(fileBytes))
+	if decodeErr != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid image format", "details": decodeErr.Error()})
 		return
 	}
 
-	// Create and save the picture object (or handle as needed)
+	log.Printf("Decoded image format: %s", format)
+
+	// Resize and compress the image
+	compressedImage, compressErr := utils.ScaleAndConvertToWebPBytes(fileBytes, CompressionQuality)
+	if compressErr != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process image", "details": compressErr.Error()})
+		return
+	}
+
+	// Store the compressed image in the database
 	picture := models.Picture{
 		ID:         primitive.NewObjectID(),
 		ImageData:  compressedImage,
 		UploadedAt: time.Now(),
 	}
 
-	if _, err := pictureCollection.InsertOne(ctx, picture); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save picture", "details": err.Error()})
+	if _, dbErr := pictureCollection.InsertOne(ctx, picture); dbErr != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to upload picture", "details": dbErr.Error()})
 		return
 	}
 
+	// Return success response
 	c.JSON(http.StatusCreated, gin.H{
 		"message": "Picture uploaded successfully",
 		"data":    picture,
