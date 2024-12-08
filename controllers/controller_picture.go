@@ -3,8 +3,11 @@ package controllers
 import (
 	"context"
 	"errors"
+	"io"
 	"log"
+	"mirage-backend/utils"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -15,6 +18,10 @@ import (
 	"mirage-backend/models"
 )
 
+const timeoutDuration = 5 * time.Second
+
+const CompressionQuality = 80
+
 const PictureCollectionName = "pictures"
 
 var pictureCollection *mongo.Collection
@@ -24,60 +31,49 @@ func InitializePictureController() {
 	pictureCollection = database.GetCollection(PictureCollectionName)
 }
 
-// TODO: add picture compression
-
-// UploadPicture handles the uploading of a new picture
+// UploadPicture handles the upload of a new picture
 func UploadPicture(c *gin.Context) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	// Set a context timeout
+	ctx, cancel := context.WithTimeout(context.Background(), timeoutDuration)
 	defer cancel()
 
-	var picture models.Picture
-
-	if err := c.ShouldBindJSON(&picture); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input", "details": err.Error()})
+	// Ensure the correct content type
+	contentType := c.GetHeader("Content-Type")
+	if !strings.HasPrefix(contentType, "image/") {
+		c.JSON(http.StatusUnsupportedMediaType, gin.H{"error": "Content-Type must be an image"})
 		return
 	}
 
-	picture.ID = primitive.NewObjectID()
-	picture.UploadedAt = time.Now()
-
-	if _, err := pictureCollection.InsertOne(ctx, picture); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to upload picture", "details": err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusCreated, gin.H{"message": "Picture uploaded successfully", "data": picture})
-}
-
-// UploadPictureToAlbum handles the uploading of a new picture to an album
-func UploadPictureToAlbum(c *gin.Context) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	albumID := c.Param("albumId")
-	var picture models.Picture
-
-	if err := c.ShouldBindJSON(&picture); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input", "details": err.Error()})
-		return
-	}
-
-	albumObjectID, err := primitive.ObjectIDFromHex(albumID)
+	// Read the raw body
+	fileBytes, err := io.ReadAll(c.Request.Body)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid album ID"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read file content", "details": err.Error()})
 		return
 	}
 
-	picture.ID = primitive.NewObjectID()
-	picture.AlbumID = albumObjectID
-	picture.UploadedAt = time.Now()
+	// Compress the image
+	compressedImage, err := utils.ScaleAndConvertToWebPBytes(fileBytes, CompressionQuality)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to compress image", "details": err.Error()})
+		return
+	}
+
+	// Create and save the picture object (or handle as needed)
+	picture := models.Picture{
+		ID:         primitive.NewObjectID(),
+		ImageData:  compressedImage,
+		UploadedAt: time.Now(),
+	}
 
 	if _, err := pictureCollection.InsertOne(ctx, picture); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to upload picture", "details": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save picture", "details": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{"message": "Picture uploaded successfully", "data": picture})
+	c.JSON(http.StatusCreated, gin.H{
+		"message": "Picture uploaded successfully",
+		"data":    picture,
+	})
 }
 
 // GetPicturesInAlbum retrieves all pictures from an album

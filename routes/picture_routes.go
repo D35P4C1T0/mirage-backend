@@ -12,7 +12,8 @@ func SetupPictureRoutes(api *gin.RouterGroup) {
 	albumRoutes := api.Group("/albums/:albumId/pictures")
 	{
 		// Upload picture to a specific album
-		albumRoutes.POST("/", controllers.UploadPictureToAlbum)
+		// it handles the :albumId parameter in the URL
+		albumRoutes.POST("/", controllers.UploadPicture)
 
 		// Get all pictures in a specific album
 		albumRoutes.GET("/", controllers.GetPicturesInAlbum)
@@ -28,6 +29,7 @@ func SetupPictureRoutes(api *gin.RouterGroup) {
 		pictureRoutes.GET("/", controllers.GetAllPictures)
 
 		// Upload a picture
+		// ignores the :albumId parameter in the URL since it's not present
 		pictureRoutes.POST("/", controllers.UploadPicture)
 
 		// Singular picture operations

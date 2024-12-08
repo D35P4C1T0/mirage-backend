@@ -4,6 +4,9 @@ import (
 	"bytes"
 	"errors"
 	"image"
+	_ "image/jpeg"
+	_ "image/png"
+
 	"log"
 
 	"github.com/kolesa-team/go-webp/encoder"
