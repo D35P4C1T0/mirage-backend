@@ -75,7 +75,7 @@ func UploadPicture(c *gin.Context) {
 	}
 
 	// Retrieve the uploaded file
-	file, header, fileErr := c.Request.FormFile("file")
+	file, _, fileErr := c.Request.FormFile("file")
 	if fileErr != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to retrieve file", "details": fileErr.Error()})
 		return
@@ -87,7 +87,7 @@ func UploadPicture(c *gin.Context) {
 		}
 	}(file)
 
-	log.Printf("Received file: %s, size: %d bytes", header.Filename, header.Size)
+	//log.Printf("Received file: %s, size: %d bytes", header.Filename, header.Size)
 
 	// Read the file into memory
 	fileBytes, readErr := io.ReadAll(file)
@@ -97,13 +97,13 @@ func UploadPicture(c *gin.Context) {
 	}
 
 	// Decode and validate the image
-	_, format, decodeErr := image.Decode(bytes.NewReader(fileBytes))
+	_, _, decodeErr := image.Decode(bytes.NewReader(fileBytes))
 	if decodeErr != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid image format", "details": decodeErr.Error()})
 		return
 	}
 
-	log.Printf("Decoded image format: %s", format)
+	//log.Printf("Decoded image format: %s", format)
 
 	// Resize and compress the image
 	compressedImage, compressErr := utils.ScaleAndConvertToWebPBytes(fileBytes, CompressionQuality)
