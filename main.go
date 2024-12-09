@@ -23,7 +23,8 @@ func main() {
 		AllowHeaders:    []string{"Origin", "Content-Length", "Content-Type", "Authorization"},
 		ExposeHeaders:   []string{"Content-Length"}, AllowCredentials: true, MaxAge: 12 * time.Hour}))
 
-	routes.InitRoutes(router)
+	const ApiPath = "/api/v1"
+	routes.InitRoutes(router, ApiPath)
 
 	port := config.GetPort()
 	if port == "" {
@@ -34,4 +35,5 @@ func main() {
 	if err != nil {
 		log.Fatalln(err)
 	}
+
 }

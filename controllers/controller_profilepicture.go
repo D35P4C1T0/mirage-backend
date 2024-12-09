@@ -24,7 +24,18 @@ func InitializeProfilePictureController() {
 
 // TODO: add picture compression
 
-// UploadProfilePicture handles the uploading of a new profile picture
+// UploadProfilePicture godoc
+// @Summary Upload a profile picture
+// @Description Uploads a profile picture to the database
+// @Tags profilepictures
+// @Accept multipart/form-data
+// @Produce json
+// @Param userId path string true "User ID"
+// @Param file formData file true "Profile picture file"
+// @Success 201 {object} models.ProfilePicture
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /profilepictures/user/{userId} [post]
 func UploadProfilePicture(c *gin.Context) {
 	// Parse and validate user ID
 	userId := c.Param("userId")

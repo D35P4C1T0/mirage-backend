@@ -43,7 +43,6 @@ type Album struct {
 	OwnerID       primitive.ObjectID   `bson:"user_id"`                   // Album owner
 	TargetUserIDs []primitive.ObjectID `bson:"target_user_ids,omitempty"` // List of users it is shared with
 	Tags          []string             `bson:"tags,omitempty"`            // Tags for categorization
-	PicturesID    []primitive.ObjectID `bson:"pictures,omitempty"`        // List of picture IDs
 	IsPrivate     bool                 `bson:"is_private"`                // Privacy setting
 	CreatedAt     time.Time            `bson:"created_at"`                // Creation timestamp
 	UpdatedAt     time.Time            `bson:"updated_at"`                // Last updated timestamp
@@ -62,16 +61,16 @@ type RecognizedFace struct {
 
 // Picture Represents a picture in an album
 type Picture struct {
-	ID          primitive.ObjectID   `bson:"_id,omitempty"`
-	ImageData   []byte               `bson:"image_data,omitempty"`  // Binary image data
-	Thumbnail   []byte               `bson:"thumbnail,omitempty"`   // Thumbnail for preview
-	AlbumID     primitive.ObjectID   `bson:"album_id"`              // Album reference
-	UserID      primitive.ObjectID   `bson:"uploader_user_id"`      // Uploader reference
-	Description string               `bson:"description,omitempty"` // Optional description
-	UploadedAt  time.Time            `bson:"uploaded_at"`           // Upload timestamp
-	FacesID     []primitive.ObjectID `bson:"faces_id,omitempty"`    // List of recognized face IDs
-	Width       int                  `bson:"width,omitempty"`       // Image width in pixels
-	Height      int                  `bson:"height,omitempty"`      // Image height in pixels
+	ID            primitive.ObjectID   `bson:"_id,omitempty"`
+	PictureDataID primitive.ObjectID   `bson:"picture_data_id"`       // Picture data reference
+	Thumbnail     []byte               `bson:"thumbnail,omitempty"`   // Thumbnail for preview
+	AlbumID       primitive.ObjectID   `bson:"album_id"`              // Album reference
+	UserID        primitive.ObjectID   `bson:"uploader_user_id"`      // Uploader reference
+	Description   string               `bson:"description,omitempty"` // Optional description
+	UploadedAt    time.Time            `bson:"uploaded_at"`           // Upload timestamp
+	FacesID       []primitive.ObjectID `bson:"faces_id,omitempty"`    // List of recognized face IDs
+	Width         int                  `bson:"width,omitempty"`       // Image width in pixels
+	Height        int                  `bson:"height,omitempty"`      // Image height in pixels
 	//FileSize    int64                `bson:"file_size,omitempty"`   // File size in bytes
 }
 
@@ -83,4 +82,10 @@ type SmartFrame struct {
 	CreatedAt    time.Time            `bson:"created_at"`                  // Device creation timestamp
 	FirstBoot    time.Time            `bson:"first_boot"`                  // Timestamp of first boot
 	LoadedAlbums []primitive.ObjectID `bson:"loaded_albums_id,omitempty"`  // Preloaded albums
+}
+
+// PictureData Represents the binary data of a picture
+type PictureData struct {
+	ID   primitive.ObjectID `bson:"_id,omitempty"`
+	Data []byte             `bson:"data,omitempty"`
 }

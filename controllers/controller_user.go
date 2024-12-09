@@ -24,6 +24,14 @@ func InitializeUserController() {
 	userCollection = database.GetCollection(UserCollectionName)
 }
 
+// GetAllUsers godoc
+// @Summary Get all users
+// @Description Get all users from the database
+// @Tags users
+// @Produce json
+// @Success 200 {array} models.User
+// @Failure 500 {object} map[string]string
+// @Router /users [get]
 func GetAllUsers(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -43,7 +51,16 @@ func GetAllUsers(c *gin.Context) {
 	c.JSON(http.StatusOK, users)
 }
 
-// GetUserProfile retrieves user profile information.
+// GetUserProfile godoc
+// @Summary Get user profile
+// @Description Get user profile information by user ID
+// @Tags users
+// @Produce json
+// @Param userId path string true "User ID"
+// @Success 200 {object} models.User
+// @Failure 400 {object} map[string]string
+// @Failure 404 {object} map[string]string
+// @Router /users/{userId} [get]
 func GetUserProfile(c *gin.Context) {
 	userId := c.Param("userId")
 	objID, err := primitive.ObjectIDFromHex(userId)
@@ -67,7 +84,19 @@ func GetUserProfile(c *gin.Context) {
 
 // TODO make it granular and every param optional
 
-// UpdateUserProfile updates user profile information.
+// UpdateUserProfile godoc
+// @Summary Update user profile
+// @Description Update user profile information by user ID
+// @Tags users
+// @Accept json
+// @Produce json
+// @Param userId path string true "User ID"
+// @Param user body models.User true "User object"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Failure 404 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /users/{userId} [put]
 func UpdateUserProfile(c *gin.Context) {
 	userId := c.Param("userId")
 	objID, err := primitive.ObjectIDFromHex(userId)
@@ -113,7 +142,17 @@ func UpdateUserProfile(c *gin.Context) {
 
 // TODO: make sure it is cascading
 
-// DeleteUser removes a user account.
+// DeleteUser godoc
+// @Summary Delete user
+// @Description Delete user account by user ID
+// @Tags users
+// @Produce json
+// @Param userId path string true "User ID"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Failure 404 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /users/{userId} [delete]
 func DeleteUser(c *gin.Context) {
 	userId := c.Param("userId")
 	objID, err := primitive.ObjectIDFromHex(userId)
@@ -139,7 +178,17 @@ func DeleteUser(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "User deleted successfully"})
 }
 
-// CreateUser creates a new user account.
+// CreateUser godoc
+// @Summary Create user
+// @Description Create a new user account
+// @Tags users
+// @Accept json
+// @Produce json
+// @Param user body models.User true "User object"
+// @Success 201 {object} map[string]interface{}
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /users [post]
 func CreateUser(c *gin.Context) {
 	var user models.User
 	if err := c.ShouldBindJSON(&user); err != nil {

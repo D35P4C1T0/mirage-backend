@@ -23,7 +23,17 @@ func InitializeAlbumController() {
 	albumCollection = database.GetCollection(AlbumCollectionName)
 }
 
-// CreateAlbum handles the creation of a new album
+// CreateAlbum godoc
+// @Summary Create a new album
+// @Description Creates a new album with the provided details
+// @Tags albums
+// @Accept json
+// @Produce json
+// @Param album body models.Album true "Album to create"
+// @Success 201 {object} map[string]interface{} "Album created successfully"
+// @Failure 400 {object} map[string]string "Invalid input"
+// @Failure 500 {object} map[string]string "Failed to create album"
+// @Router /albums [post]
 func CreateAlbum(c *gin.Context) {
 	var album models.Album
 
@@ -50,7 +60,14 @@ func CreateAlbum(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{"message": "Album created successfully", "data": album})
 }
 
-// GetAllAlbums retrieves all albums
+// GetAllAlbums godoc
+// @Summary Retrieve all albums
+// @Description Fetches a list of all albums in the database
+// @Tags albums
+// @Produce json
+// @Success 200 {object} map[string]interface{} "Albums retrieved successfully"
+// @Failure 500 {object} map[string]string "Failed to retrieve albums"
+// @Router /albums [get]
 func GetAllAlbums(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -86,7 +103,17 @@ func GetAllAlbums(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Albums retrieved successfully", "data": albums})
 }
 
-// GetAlbumByID retrieves a specific album by its ID
+// GetAlbumByID godoc
+// @Summary Retrieve a specific album
+// @Description Fetches a single album by its unique identifier
+// @Tags albums
+// @Produce json
+// @Param albumId path string true "Album Unique Identifier"
+// @Success 200 {object} map[string]interface{} "Album retrieved successfully"
+// @Failure 400 {object} map[string]string "Invalid album ID"
+// @Failure 404 {object} map[string]string "Album not found"
+// @Failure 500 {object} map[string]string "Failed to retrieve album"
+// @Router /albums/{albumId} [get]
 func GetAlbumByID(c *gin.Context) {
 	albumID := c.Param("albumId")
 
@@ -116,7 +143,16 @@ func GetAlbumByID(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Album retrieved successfully", "data": album})
 }
 
-// GetAlbumsByUserID retrieves all albums associated with a specific user ID
+// GetAlbumsByUserID godoc
+// @Summary Retrieve albums for a specific user
+// @Description Fetches all albums associated with a given user ID
+// @Tags albums
+// @Produce json
+// @Param userId path string true "User Unique Identifier"
+// @Success 200 {object} map[string]interface{} "Albums retrieved successfully"
+// @Failure 400 {object} map[string]string "Invalid user ID"
+// @Failure 500 {object} map[string]string "Failed to retrieve albums"
+// @Router /albums/user/{userId} [get]
 func GetAlbumsByUserID(c *gin.Context) {
 	userID := c.Param("userId")
 
@@ -163,6 +199,19 @@ func GetAlbumsByUserID(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Albums retrieved successfully", "data": albums})
 }
 
+// UpdateAlbum godoc
+// @Summary Update an existing album
+// @Description Updates the details of a specific album by its ID
+// @Tags albums
+// @Accept json
+// @Produce json
+// @Param albumId path string true "Album Unique Identifier"
+// @Param album body models.Album true "Album update information"
+// @Success 200 {object} map[string]string "Album updated successfully"
+// @Failure 400 {object} map[string]string "Invalid input or album ID"
+// @Failure 404 {object} map[string]string "Album not found"
+// @Failure 500 {object} map[string]string "Failed to update album"
+// @Router /albums/{albumId} [put]
 func UpdateAlbum(c *gin.Context) {
 	albumID := c.Param("albumId")
 	var updatedAlbum models.Album
@@ -200,6 +249,17 @@ func UpdateAlbum(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Album updated successfully"})
 }
 
+// DeleteAlbum godoc
+// @Summary Delete an album
+// @Description Permanently removes an album from the database by its ID
+// @Tags albums
+// @Produce json
+// @Param albumId path string true "Album Unique Identifier"
+// @Success 200 {object} map[string]string "Album deleted successfully"
+// @Failure 400 {object} map[string]string "Invalid album ID"
+// @Failure 404 {object} map[string]string "Album not found"
+// @Failure 500 {object} map[string]string "Failed to delete album"
+// @Router /albums/{albumId} [delete]
 func DeleteAlbum(c *gin.Context) {
 	albumID := c.Param("albumId")
 
@@ -229,6 +289,15 @@ func DeleteAlbum(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Album deleted successfully"})
 }
 
+// SearchAlbums godoc
+// @Summary Search albums
+// @Description Searches albums by title using case-insensitive partial matching
+// @Tags albums
+// @Produce json
+// @Param q query string true "Search query"
+// @Success 200 {object} map[string]interface{} "Albums retrieved successfully"
+// @Failure 500 {object} map[string]string "Failed to search albums"
+// @Router /albums/search [get]
 func SearchAlbums(c *gin.Context) {
 	query := c.Query("q")
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)

@@ -33,7 +33,8 @@ func SetupPictureRoutes(api *gin.RouterGroup) {
 		pictureRoutes.POST("/", controllers.UploadPicture)
 
 		// Singular picture operations
-		pictureRoutes.GET("/:pictureId", controllers.GetPictureByID)   // Retrieve a specific picture by ID
-		pictureRoutes.DELETE("/:pictureId", controllers.DeletePicture) // Delete a specific picture by ID
+		pictureRoutes.GET("/:pictureId", controllers.GetPictureByID)      // Retrieve a specific picture by ID
+		pictureRoutes.GET("/:pictureId/data", controllers.GetPictureData) // Download a specific picture by ID
+		pictureRoutes.DELETE("/:pictureId", controllers.DeletePicture)    // Delete a specific picture by ID
 	}
 }
