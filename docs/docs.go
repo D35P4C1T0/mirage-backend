@@ -831,7 +831,9 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "profilepictures"
+                    "profile",
+                    "pictures",
+                    "pfp"
                 ],
                 "summary": "Upload a profile picture",
                 "parameters": [
@@ -1248,12 +1250,9 @@ const docTemplate = `{
                 "id": {
                     "type": "string"
                 },
-                "imageData": {
-                    "description": "Binary profile picture data",
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
-                    }
+                "pictureID": {
+                    "description": "Associated picture",
+                    "type": "string"
                 },
                 "userID": {
                     "description": "User associated with this picture",

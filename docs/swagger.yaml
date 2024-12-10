@@ -77,11 +77,9 @@ definitions:
         type: string
       id:
         type: string
-      imageData:
-        description: Binary profile picture data
-        items:
-          type: integer
-        type: array
+      pictureID:
+        description: Associated picture
+        type: string
       userID:
         description: User associated with this picture
         type: string
@@ -700,7 +698,9 @@ paths:
             type: object
       summary: Upload a profile picture
       tags:
-      - profilepictures
+      - profile
+      - pictures
+      - pfp
   /users:
     get:
       description: Get all users from the database

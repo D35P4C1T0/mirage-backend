@@ -30,7 +30,7 @@ type UserProfile struct {
 // ProfilePicture Represents a profile picture
 type ProfilePicture struct {
 	ID        primitive.ObjectID `bson:"_id,omitempty"`
-	ImageData []byte             `bson:"image_data,omitempty"`       // Binary profile picture data
+	PictureID primitive.ObjectID `bson:"picture_id"`                 // Associated picture
 	UserID    primitive.ObjectID `bson:"user_id" binding:"required"` // User associated with this picture
 	CreatedAt time.Time          `bson:"created_at"`                 // When the profile picture was uploaded
 }

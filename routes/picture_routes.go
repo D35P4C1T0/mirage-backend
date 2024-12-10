@@ -6,8 +6,6 @@ import (
 )
 
 func SetupPictureRoutes(api *gin.RouterGroup) {
-
-	controllers.InitializePictureController()
 	// Route group for album-related picture operations
 	albumRoutes := api.Group("/albums/:albumId/pictures")
 	{

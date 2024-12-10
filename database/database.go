@@ -19,10 +19,10 @@ type Connection struct {
 
 var Db = Connection{}
 
-func SetupDatabase() {
+func SetupDatabase() (bool, error) {
 	mongoURI := config.GetDatabaseURI()
 	if mongoURI == "" {
-		log.Fatal("MONGO_URI not set in .env file")
+		return false, fmt.Errorf("MONGO_URI not set in .env file")
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -34,7 +34,7 @@ func SetupDatabase() {
 	// Connect to MongoDB
 	Db.Client, err = mongo.Connect(ctx, clientOptions)
 	if err != nil {
-		log.Fatal(err)
+		return false, fmt.Errorf("failed to connect to MongoDB: %v", err)
 	}
 
 	// set database
@@ -43,10 +43,10 @@ func SetupDatabase() {
 	// verify connection
 	err = Db.Client.Ping(ctx, nil)
 	if err != nil {
-		log.Fatal(err)
+		return false, fmt.Errorf("failed to ping MongoDB: %v", err)
 	}
 
-	log.Println("Connected to MongoDB!")
+	return true, nil
 }
 
 func GetCollection(collectionName string) *mongo.Collection {

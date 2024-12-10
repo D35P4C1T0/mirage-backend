@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"context"
-	"go.mongodb.org/mongo-driver/mongo"
 	"net/http"
 	"time"
 
@@ -12,17 +11,6 @@ import (
 	"mirage-backend/database"
 	"mirage-backend/models"
 )
-
-// TODO let chatgpt improve this code
-
-const UserCollectionName = "users"
-
-var userCollection *mongo.Collection
-
-// InitializeUserController initializes the user collection
-func InitializeUserController() {
-	userCollection = database.GetCollection(UserCollectionName)
-}
 
 // GetAllUsers godoc
 // @Summary Get all users
@@ -36,7 +24,7 @@ func GetAllUsers(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	cursor, err := userCollection.Find(ctx, bson.M{})
+	cursor, err := database.UserCollection.Find(ctx, bson.M{})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error fetching users"})
 		return
@@ -73,7 +61,7 @@ func GetUserProfile(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	err = userCollection.FindOne(ctx, bson.M{"_id": objID}).Decode(&user)
+	err = database.UserCollection.FindOne(ctx, bson.M{"_id": objID}).Decode(&user)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 		return
@@ -126,7 +114,7 @@ func UpdateUserProfile(c *gin.Context) {
 		},
 	}
 
-	result, err := userCollection.UpdateOne(ctx, bson.M{"_id": objID}, update)
+	result, err := database.UserCollection.UpdateOne(ctx, bson.M{"_id": objID}, update)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error updating user"})
 		return
@@ -164,7 +152,7 @@ func DeleteUser(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	result, err := userCollection.DeleteOne(ctx, bson.M{"_id": objID})
+	result, err := database.UserCollection.DeleteOne(ctx, bson.M{"_id": objID})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error deleting user"})
 		return
@@ -202,7 +190,7 @@ func CreateUser(c *gin.Context) {
 	user.CreatedAt = time.Now()
 	user.UpdatedAt = time.Now()
 
-	result, err := userCollection.InsertOne(ctx, user)
+	result, err := database.UserCollection.InsertOne(ctx, user)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error creating user"})
 		return

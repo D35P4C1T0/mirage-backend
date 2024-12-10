@@ -4,30 +4,20 @@ import (
 	"context"
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
-	"io"
-	"mime/multipart"
+	"mirage-backend/controllers/dbutils"
 	"mirage-backend/database"
 	"mirage-backend/models"
+	"mirage-backend/utils"
 	"net/http"
 	"time"
 )
-
-const PfpCollectionName = "profilepictures"
-
-var pfpCollection *mongo.Collection
-
-// InitializeProfilePictureController initializes the user collection
-func InitializeProfilePictureController() {
-	pfpCollection = database.GetCollection(PfpCollectionName)
-}
 
 // TODO: add picture compression
 
 // UploadProfilePicture godoc
 // @Summary Upload a profile picture
 // @Description Uploads a profile picture to the database
-// @Tags profilepictures
+// @Tags profile, pictures, pfp
 // @Accept multipart/form-data
 // @Produce json
 // @Param userId path string true "User ID"
@@ -37,54 +27,79 @@ func InitializeProfilePictureController() {
 // @Failure 500 {object} map[string]string
 // @Router /profilepictures/user/{userId} [post]
 func UploadProfilePicture(c *gin.Context) {
-	// Parse and validate user ID
-	userId := c.Param("userId")
-	objID, err := primitive.ObjectIDFromHex(userId)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID format"})
-		return
-	}
-
-	// Get the uploaded file
-	file, err := c.FormFile("file")
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "File not provided or invalid"})
-		return
-	}
-
-	// Open the uploaded file
-	fileHeader, err := file.Open()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to open uploaded file"})
-		return
-	}
-	defer func(fileHeader multipart.File) {
-		err := fileHeader.Close()
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to close uploaded file"})
-		}
-	}(fileHeader)
-
-	// Read file content into a byte slice
-	fileBytes, err := io.ReadAll(fileHeader)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read file content"})
-		return
-	}
-
-	// Context with timeout for database operations
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), timeoutDuration)
+	// Set context with timeout
 	defer cancel()
+
+	// Ensure multipart/form-data is used
+	contentType := c.ContentType()
+	if contentType != "multipart/form-data" {
+		c.JSON(http.StatusUnsupportedMediaType, gin.H{"error": "Content-Type must be multipart/form-data"})
+		return
+	}
+
+	var userObjectID primitive.ObjectID
+	userId := c.Param("userId")
+	if userId != "" {
+		var err error
+		userObjectID, err = primitive.ObjectIDFromHex(userId)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+			return
+		}
+	}
+
+	userExists, err := dbutils.CheckIfItemExists(c, database.UserCollection, userObjectID)
+	if !userExists {
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		return
+	} else if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check if user exists"})
+		return
+	}
+
+	// Get the file from the request
+	fileBytes, readErr := utils.RetrieveImageFromHTTPForm(c, "file")
+	if readErr {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid file"})
+		return
+	}
+
+	// Resize and compress the image
+	// I don't know how it behaves if the
+	// picture has a 1:1 aspect ratio - idk
+	compressedImage, compressErr := utils.ScaleAndConvertToWebPBytes(fileBytes, 45)
+	if compressErr != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process image", "details": compressErr.Error()})
+		return
+	}
+
+	newPicture := models.Picture{
+		ID:          primitive.NewObjectID(),
+		Description: "Profile picture of user " + userId,
+	}
+
+	// Insert the picture into the database
+	pictureAdded, err :=
+		dbutils.AddPictureToDB(ctx, compressedImage, database.PictureDataCollection, database.PictureCollection, newPicture)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error uploading profile picture to the database"})
+		return
+	}
+	if !pictureAdded {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to upload profile picture to the database"})
+		return
+	}
 
 	// Create a new profile picture object
 	profilePicture := models.ProfilePicture{
-		ImageData: fileBytes,
-		UserID:    objID,
+		PictureID: newPicture.ID,
+		UserID:    userObjectID,
 		CreatedAt: time.Now(),
 	}
 
 	// Insert the profile picture into the database
-	result, err := userCollection.InsertOne(ctx, profilePicture)
+	result, err := database.PfpCollection.InsertOne(ctx, profilePicture)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to upload profile picture to the database"})
 		return

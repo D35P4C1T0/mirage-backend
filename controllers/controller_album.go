@@ -14,15 +14,6 @@ import (
 	"mirage-backend/models"
 )
 
-const AlbumCollectionName = "albums"
-
-var albumCollection *mongo.Collection
-
-// InitializeAlbumController initializes the album collection
-func InitializeAlbumController() {
-	albumCollection = database.GetCollection(AlbumCollectionName)
-}
-
 // CreateAlbum godoc
 // @Summary Create a new album
 // @Description Creates a new album with the provided details
@@ -51,7 +42,7 @@ func CreateAlbum(c *gin.Context) {
 	defer cancel()
 
 	// Insert album into the database
-	_, err := albumCollection.InsertOne(ctx, album)
+	_, err := database.AlbumCollection.InsertOne(ctx, album)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create album", "details": err.Error()})
 		return
@@ -72,7 +63,7 @@ func GetAllAlbums(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	cursor, err := albumCollection.Find(ctx, bson.M{})
+	cursor, err := database.AlbumCollection.Find(ctx, bson.M{})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve albums", "details": err.Error()})
 		return
@@ -130,7 +121,7 @@ func GetAlbumByID(c *gin.Context) {
 	// Query the albums collection
 	var album models.Album
 	filter := bson.M{"_id": albumObjectID}
-	err = albumCollection.FindOne(ctx, filter).Decode(&album)
+	err = database.AlbumCollection.FindOne(ctx, filter).Decode(&album)
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Album not found"})
@@ -168,7 +159,7 @@ func GetAlbumsByUserID(c *gin.Context) {
 
 	// Query albums collection to find albums by user ID
 	filter := bson.M{"user_id": userObjectID}
-	cursor, err := albumCollection.Find(ctx, filter)
+	cursor, err := database.AlbumCollection.Find(ctx, filter)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve albums", "details": err.Error()})
 		return
@@ -235,7 +226,7 @@ func UpdateAlbum(c *gin.Context) {
 	// Update album in the database
 	filter := bson.M{"_id": albumObjectID}
 	update := bson.M{"$set": updatedAlbum}
-	result, err := albumCollection.UpdateOne(ctx, filter, update)
+	result, err := database.AlbumCollection.UpdateOne(ctx, filter, update)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update album", "details": err.Error()})
 		return
@@ -275,7 +266,7 @@ func DeleteAlbum(c *gin.Context) {
 
 	// Delete album
 	filter := bson.M{"_id": albumObjectID}
-	result, err := albumCollection.DeleteOne(ctx, filter)
+	result, err := database.AlbumCollection.DeleteOne(ctx, filter)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete album", "details": err.Error()})
 		return
@@ -305,7 +296,7 @@ func SearchAlbums(c *gin.Context) {
 
 	// Search query using case-insensitive regex
 	filter := bson.M{"title": bson.M{"$regex": query, "$options": "i"}}
-	cursor, err := albumCollection.Find(ctx, filter)
+	cursor, err := database.AlbumCollection.Find(ctx, filter)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to search albums", "details": err.Error()})
 		return

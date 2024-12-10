@@ -1,13 +1,10 @@
 package controllers
 
 import (
-	"bytes"
 	"context"
 	"errors"
-	"image"
-	"io"
 	"log"
-	"mime/multipart"
+	"mirage-backend/controllers/dbutils"
 	"mirage-backend/utils"
 	"net/http"
 	"time"
@@ -23,20 +20,6 @@ import (
 const timeoutDuration = 10 * time.Second
 
 const CompressionQuality = 80
-
-const PictureCollectionName = "pictures"
-
-const PictureDataCollectionName = "pictureData"
-
-var pictureCollection *mongo.Collection
-
-var pictureDataCollection *mongo.Collection
-
-// InitializePictureController initializes the picture collection
-func InitializePictureController() {
-	pictureCollection = database.GetCollection(PictureCollectionName)
-	pictureDataCollection = database.GetCollection(PictureDataCollectionName)
-}
 
 // UploadPicture godoc
 // @Summary Upload a picture
@@ -63,6 +46,7 @@ func UploadPicture(c *gin.Context) {
 		return
 	}
 
+	// Get the album ID from the request
 	var albumObjectID primitive.ObjectID
 	albumId := c.Param("albumId")
 	if albumId != "" {
@@ -74,32 +58,29 @@ func UploadPicture(c *gin.Context) {
 		}
 	}
 
-	// Retrieve the uploaded file
-	file, _, fileErr := c.Request.FormFile("file")
-	if fileErr != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to retrieve file", "details": fileErr.Error()})
+	// check if album exists
+	albumExists, err := dbutils.CheckIfItemExists(c, database.AlbumCollection, albumObjectID)
+	if !albumExists {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Album not found"})
 		return
-	}
-	defer func(file multipart.File) {
-		err := file.Close()
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to close file", "details": err.Error()})
-		}
-	}(file)
-
-	//log.Printf("Received file: %s, size: %d bytes", header.Filename, header.Size)
-
-	// Read the file into memory
-	fileBytes, readErr := io.ReadAll(file)
-	if readErr != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read file", "details": readErr.Error()})
-		return
+	} else if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check if album exists in the database"})
 	}
 
-	// Decode and validate the image
-	_, _, decodeErr := image.Decode(bytes.NewReader(fileBytes))
-	if decodeErr != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid image format", "details": decodeErr.Error()})
+	//// for the future
+	//userExists, err := dbutils.CheckIfItemExists(c, userCollection, userObjectID)
+	//if !userExists {
+	//	c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+	//	return
+	//} else if err != nil {
+	//	c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check if user exists"})
+	//	return
+	//}
+
+	// Get the file from the request
+	fileBytes, readErr := utils.RetrieveImageFromHTTPForm(c, "file")
+	if readErr {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid file"})
 		return
 	}
 
@@ -112,35 +93,22 @@ func UploadPicture(c *gin.Context) {
 		return
 	}
 
-	width, height, dimErr := utils.GetPictureDimensions(compressedImage)
-	if dimErr != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get image dimensions", "details": dimErr.Error()})
-		return
-	}
-
-	// Store the compressed image in the database
-	pictureData := models.PictureData{
-		ID:   primitive.NewObjectID(),
-		Data: compressedImage,
-	}
-
-	if _, dbErr := pictureDataCollection.InsertOne(ctx, pictureData); dbErr != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to upload picture", "details": dbErr.Error()})
-		return
-	}
-
 	// Store the compressed image in the database
 	picture := models.Picture{
-		ID:            primitive.NewObjectID(),
-		PictureDataID: pictureData.ID,
-		UploadedAt:    time.Now(),
-		AlbumID:       albumObjectID,
-		Width:         width,
-		Height:        height,
+		ID:         primitive.NewObjectID(),
+		UploadedAt: time.Now(),
+		AlbumID:    albumObjectID,
 	}
 
-	if _, dbErr := pictureCollection.InsertOne(ctx, picture); dbErr != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to upload picture", "details": dbErr.Error()})
+	// Insert the picture into the database
+	pictureAdded, err :=
+		dbutils.AddPictureToDB(ctx, compressedImage, database.PictureDataCollection, database.PictureCollection, picture)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error uploading profile picture to the database"})
+		return
+	}
+	if !pictureAdded {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to upload profile picture to the database"})
 		return
 	}
 
@@ -176,7 +144,7 @@ func GetPictureData(c *gin.Context) {
 
 	// retrieve the picture
 	var picture models.Picture
-	if err := pictureCollection.FindOne(ctx, bson.M{"_id": pictureObjectID}).Decode(&picture); err != nil {
+	if err := database.PictureCollection.FindOne(ctx, bson.M{"_id": pictureObjectID}).Decode(&picture); err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Picture not found"})
 		} else {
@@ -187,7 +155,7 @@ func GetPictureData(c *gin.Context) {
 
 	// Retrieve the picture data
 	var pictureData models.PictureData
-	if err := pictureDataCollection.FindOne(ctx, bson.M{"_id": picture.PictureDataID}).Decode(&pictureData); err != nil {
+	if err := database.PictureDataCollection.FindOne(ctx, bson.M{"_id": picture.PictureDataID}).Decode(&pictureData); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve picture data", "details": err.Error()})
 		return
 	}
@@ -221,7 +189,7 @@ func GetPicturesInAlbum(c *gin.Context) {
 	}
 
 	filter := bson.M{"album_id": albumObjectID}
-	cursor, err := pictureCollection.Find(ctx, filter)
+	cursor, err := database.PictureCollection.Find(ctx, filter)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve pictures", "details": err.Error()})
 		return
@@ -267,7 +235,7 @@ func GetPictureByID(c *gin.Context) {
 
 	filter := bson.M{"_id": pictureObjectID}
 	var picture models.Picture
-	if err := pictureCollection.FindOne(ctx, filter).Decode(&picture); err != nil {
+	if err := database.PictureCollection.FindOne(ctx, filter).Decode(&picture); err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Picture not found"})
 		} else {
@@ -303,7 +271,7 @@ func DeletePicture(c *gin.Context) {
 	}
 
 	filter := bson.M{"_id": pictureObjectID}
-	result, err := pictureCollection.DeleteOne(ctx, filter)
+	result, err := database.PictureCollection.DeleteOne(ctx, filter)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete picture", "details": err.Error()})
 		return
@@ -330,7 +298,7 @@ func GetAllPictures(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	cursor, err := pictureCollection.Find(ctx, bson.M{})
+	cursor, err := database.PictureCollection.Find(ctx, bson.M{})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve pictures", "details": err.Error()})
 		return
@@ -390,7 +358,7 @@ func DeCouplePictureFromAlbum(c *gin.Context) {
 	filter := bson.M{"_id": albumObjectID}
 	update := bson.M{"$pull": bson.M{"pictureIds": pictureObjectID}}
 
-	result, err := albumCollection.UpdateOne(ctx, filter, update)
+	result, err := database.AlbumCollection.UpdateOne(ctx, filter, update)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to dissociate picture from album", "details": err.Error()})
 		return

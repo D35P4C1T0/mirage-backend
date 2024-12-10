@@ -6,8 +6,6 @@ import (
 )
 
 func SetupProfilePictureRoutes(api *gin.RouterGroup) {
-
-	controllers.InitializeProfilePictureController()
 	// Route group for profile picture-related operations
 	profilePictureRoutes := api.Group("/profilepictures")
 	{

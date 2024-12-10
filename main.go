@@ -10,8 +10,16 @@ import (
 	"time"
 )
 
+func init() {
+	dbConnected, err := database.SetupDatabase()
+	if err != nil {
+		log.Fatalf("Failed to connect to MongoDB: %v", err)
+	} else if dbConnected {
+		log.Println("Connected to MongoDB!")
+	}
+}
+
 func main() {
-	database.SetupDatabase()
 
 	router := gin.Default()
 	//router.Use(cors.Default())

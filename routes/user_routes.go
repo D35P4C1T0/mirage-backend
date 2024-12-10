@@ -6,7 +6,6 @@ import (
 )
 
 func SetupUserRoutes(api *gin.RouterGroup) {
-	controllers.InitializeUserController()
 
 	userRoutes := api.Group("/users")
 	{
